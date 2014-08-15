@@ -1,6 +1,4 @@
 openstack_3nodes
 ================
 
-3 Nodes OpenStack cloud Based Environment with vagrant
-
-[image from OpenStack Doc (3 Nodes)](sources/installguide_arch-neutron.png)
+![3 Nodes OpenStack Based Environment with vagrant](http://docs.openstack.org/icehouse/install-guide/install/apt/content/figures/1/figures/installguide_arch-neutron.png "OpenStack in 3 nodes")
