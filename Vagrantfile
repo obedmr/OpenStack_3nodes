@@ -5,8 +5,9 @@ VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
  
-  config.vm.box = "CentOS_7.0"
-  config.vm.box_url = "https://dl.dropboxusercontent.com/s/w3lbekm7eunrskm/centos-7.0-x86_64.box"
+  config.vm.box = "CentOS_6.5"
+  #config.vm.box_url = "https://dl.dropboxusercontent.com/s/w3lbekm7eunrskm/centos-7.0-x86_64.box"
+  config.vm.box_url = "https://github.com/2creatives/vagrant-centos/releases/download/v6.5.3/centos65-x86_64-20140116.box"
  
   # Turn off shared folders
   config.vm.synced_folder ".", "/vagrant", id: "vagrant-root", disabled: true

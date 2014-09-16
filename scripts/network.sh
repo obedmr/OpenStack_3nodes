@@ -37,9 +37,11 @@ sudo service network restart
 sudo yum install -y MySQL-python
 sudo yum install -y yum-plugin-priorities
 
-
-# Installing Utilities
-#sudo apt-get install -y python-software-properties
-#sudo apt-get install emacs
-#sudo apt-get update -y
+# OpenStack packages                                                  
+sudo yum install -y http://repos.fedorapeople.org/repos/openstack/openstack-icehouse/rdo-release-icehouse-4.noarch.rpm
+sudo yum install -y http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+sudo yum install -y openstack-utils
+sudo yum install -y openstack-selinux
+sudo yum upgrade -y
 #sudo reboot
+
