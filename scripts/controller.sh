@@ -61,6 +61,7 @@ sudo mysql -e "FLUSH PRIVILEGES;"
 # Installing common tools                                               
 sudo yum install -y MySQL-python
 sudo yum install -y yum-plugin-priorities
+sudo yum install -y wget
 
 # OpenStack packages
 sudo yum install -y http://repos.fedorapeople.org/repos/openstack/openstack-icehouse/rdo-release-icehouse-4.noarch.rpm
@@ -140,3 +141,92 @@ sudo yum install -y python-neutronclient
 sudo yum install -y python-novaclient
 sudo yum install -y python-swiftclient
 sudo yum install -y python-troveclient
+
+# Glance - Image Service
+sudo yum install -y openstack-glance python-glanceclient
+
+sudo openstack-config --set /etc/glance/glance-api.conf database \
+  connection mysql://glance:a7060f997fbff5065008@controller/glance
+
+sudo openstack-config --set /etc/glance/glance-registry.conf database \
+  connection mysql://glance:a7060f997fbff5065008@controller/glance
+
+mysql -u root -pa7060f997fbff5065008 -e "
+CREATE DATABASE glance DEFAULT CHARACTER SET utf8;
+GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' IDENTIFIED BY 'a7060f997fbff5065008';
+GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'%' IDENTIFIED BY 'a7060f997fbff5065008';
+"
+
+sudo  /bin/sh -c "glance-manage db_sync" 
+
+
+keystone user-create --name=glance --pass=a7060f997fbff5065008 \
+   --email=glance@homecloud.com
+keystone user-role-add --user=glance --tenant=service --role=admin
+
+sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+  auth_uri http://controller:5000
+
+sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+  auth_host controller
+
+sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+  auth_port 35357
+sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+  auth_protocol http
+
+sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+  admin_tenant_name service
+
+sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+  admin_user glance
+
+sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+  admin_password a7060f997fbff5065008
+
+sudo openstack-config --set /etc/glance/glance-api.conf paste_deploy \
+  flavor keystone
+
+sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+  auth_uri http://controller:5000
+
+sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+  auth_host controller
+
+sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+  auth_port 35357
+
+sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+  auth_protocol http
+
+sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+  admin_tenant_name service
+
+sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+  admin_user glance
+
+sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+  admin_password a7060f997fbff5065008
+
+sudo openstack-config --set /etc/glance/glance-registry.conf paste_deploy \
+  flavor keystone
+
+keystone service-create --name=glance --type=image \
+  --description="OpenStack Image Service"
+keystone endpoint-create \
+  --service-id=$(keystone service-list | awk '/ image / {print $2}') \
+  --publicurl=http://controller:9292 \
+  --internalurl=http://controller:9292 \
+  --adminurl=http://controller:9292
+
+sudo chown glance:glance -R /var/log/glance
+sudo service openstack-glance-api start
+sudo service openstack-glance-registry start
+sudo chkconfig openstack-glance-api on
+sudo chkconfig openstack-glance-registry on
+
+glance image-create --name="cirros-0.3.2-x86_64" --disk-format=qcow2 \
+  --container-format=bare --is-public=true \
+  --copy-from http://cdn.download.cirros-cloud.net/0.3.2/cirros-0.3.2-x86_64-disk.img
+
+
