@@ -1,6 +1,5 @@
 # Update Repositories 
-
-sudo yum update -y
+# sudo yum update -y
 
 # Installing the best text editor
 sudo yum install -y emacs
