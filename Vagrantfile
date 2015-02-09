@@ -5,9 +5,7 @@ VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
  
-  config.vm.box = "CentOS_6.5"
-  #config.vm.box_url = "https://dl.dropboxusercontent.com/s/w3lbekm7eunrskm/centos-7.0-x86_64.box"
-  config.vm.box_url = "https://github.com/2creatives/vagrant-centos/releases/download/v6.5.3/centos65-x86_64-20140116.box"
+  config.vm.box = "chef/centos-7.0"
  
   # Turn off shared folders
   config.vm.synced_folder ".", "/vagrant", id: "vagrant-root", disabled: true
@@ -16,7 +14,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.define "controller" do |controller_config|
     controller_config.vm.hostname = "controller"
     controller_config.vm.provision "shell", path: "scripts/controller.sh"
- 
     controller_config.vm.network "private_network", ip: "10.0.0.11"
     controller_config.vm.provider "virtualbox" do |v|
         v.customize ["modifyvm", :id, "--memory", "1024"]
@@ -28,7 +25,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
  # Compute node                                                                                      
   config.vm.define "compute1" do |compute1_config|
     compute1_config.vm.hostname = "compute1"
-    compute1_config.vm.provision "shell", path: "scripts/compute.sh"
+    #compute1_config.vm.provision "shell", path: "scripts/compute.sh"
 
     compute1_config.vm.network "private_network", ip: "10.0.0.31"
     compute1_config.vm.network "private_network", ip: "10.0.1.31"
@@ -39,11 +36,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     end
   end
   # End Compute node 
-  
-   # Network node                                                                           
+
+  # Network node                                                                  
   config.vm.define "network" do |network_config|
     network_config.vm.hostname = "network"
-    network_config.vm.provision "shell", path: "scripts/network.sh"
+    #network_config.vm.provision "shell", path: "scripts/network.sh"
 
     network_config.vm.network "private_network", ip: "10.0.0.21"
     network_config.vm.network "private_network", ip: "10.0.1.21"
