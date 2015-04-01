@@ -1,107 +1,114 @@
 # Update Repositories 
-# sudo yum update -y
+yum update -y
 
 # Installing the best text editor
-sudo yum install -y emacs
+yum install -y emacs-nox
 
 # Networning 
+service NetworkManager stop
+service network start
+chkconfig NetworkManager off
+chkconfig network on
 
-#sudo service NetworkManager stop
-#sudo service network start
-#sudo chkconfig NetworkManager off
-#sudo chkconfig network on
+service firewalld stop
+chkconfig firewalld off
+yum install -y iptables-services
+service iptables start
+chkconfig iptables on
 
-sudo service firewalld stop
-sudo chkconfig firewalld off
-sudo yum install -y iptables-services
-sudo service iptables start
-sudo chkconfig iptables on
-
-echo root:vagrant | chpasswd
 echo "10.0.0.11 controller" >> /etc/hosts
 echo "10.0.0.21 network" >> /etc/hosts
 echo "10.0.0.31 compute1" >> /etc/hosts
 
-sudo service network restart
+service network restart
 
+echo root:vagrant | chpasswd
 
 # Network Time Protocol (NTP)
-#sudo yum install ntp -y
+yum install ntp -y
 
-#sudo sed -i "21s/.*/server 0.north-america.pool.ntp.org iburst/" /etc/ntp.conf
-#sudo sed -i "22s/.*/server 0.north-america.pool.ntp.org iburst/" /etc/ntp.conf
-#sudo sed -i "23s/.*/server 0.north-america.pool.ntp.org iburst/" /etc/ntp.conf
-#sudo sed -i "24s/.*/server 0.north-america.pool.ntp.org iburst/" /etc/ntp.conf
+sed -i "21s/.*/server 0.north-america.pool.ntp.org iburst/" /etc/ntp.conf
+sed -i "22s/.*/server 0.north-america.pool.ntp.org iburst/" /etc/ntp.conf
+sed -i "23s/.*/server 0.north-america.pool.ntp.org iburst/" /etc/ntp.conf
+sed -i "24s/.*/server 0.north-america.pool.ntp.org iburst/" /etc/ntp.conf
 
-#sudo bash -c 'echo "restrict -4 default kod notrap nomodify" >> /etc/ntp.conf'
-#sudo bash -c 'echo "restrict -6 default kod notrap nomodify" >> /etc/ntp.conf'
+bash -c 'echo "restrict -4 default kod notrap nomodify" >> /etc/ntp.conf'
+bash -c 'echo "restrict -6 default kod notrap nomodify" >> /etc/ntp.conf'
 
-#sudo service ntpd start
-#sudo  chkconfig ntpd on
+#service ntpd start
+# chkconfig ntpd on
+
+# Prerequesites
+yum install -y yum-plugin-priorities
+yum install -y http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
+yum install -y http://rdo.fedorapeople.org/openstack-juno/rdo-release-juno.rpm
+yum -y upgrade
+yum install -y openstack-selinux openstack-utils
 
 # MySQL Server
-sudo yum install mysql-server mysql -y
-sudo sed -i '10i\bind-address = 10.0.0.11' /etc/my.cnf
-sudo sed -i '11i\character-set-server = utf8' /etc/my.cnf
-sudo sed -i "12i\init-connect = 'SET NAMES utf8'" /etc/my.cnf 
-sudo sed -i '13i\collation-server = utf8_general_ci' /etc/my.cnf 
-sudo sed -i '14i\innodb_file_per_table' /etc/my.cnf 
-sudo sed -i '15i\default-storage-engine = innodb' /etc/my.cnf 
-sudo service mysqld start
-sudo chkconfig mysqld on
+yum install -y mariadb mariadb-server MySQL-python
 
-sudo mysql -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-sudo mysql -e "DELETE FROM mysql.user WHERE User='';"
-sudo mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
-sudo mysql -e "UPDATE mysql.user SET Password=PASSWORD('a7060f997fbff5065008') WHERE User='root';"
-sudo mysql -e "FLUSH PRIVILEGES;"
+sed -i '10i\bind-address = 10.0.0.11' /etc/my.cnf
+sed -i '11i\character-set-server = utf8' /etc/my.cnf
+sed -i "12i\init-connect = 'SET NAMES utf8'" /etc/my.cnf 
+sed -i '13i\collation-server = utf8_general_ci' /etc/my.cnf 
+sed -i '14i\innodb_file_per_table' /etc/my.cnf 
+sed -i '15i\default-storage-engine = innodb' /etc/my.cnf 
 
+systemctl enable mariadb.service
+systemctl start mariadb.service
 
-# Installing common tools                                               
-sudo yum install -y MySQL-python
-sudo yum install -y yum-plugin-priorities
-sudo yum install -y wget
-
-# OpenStack packages
-sudo yum install -y http://repos.fedorapeople.org/repos/openstack/openstack-icehouse/rdo-release-icehouse-4.noarch.rpm
-sudo yum install -y http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-sudo yum install -y openstack-utils
-sudo yum install -y openstack-selinux
-sudo yum upgrade -y 
-#sudo reboot
+mysql -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
+mysql -e "DELETE FROM mysql.user WHERE User='';"
+mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+mysql -e "UPDATE mysql.user SET Password=PASSWORD('a7060f997fbff5065008') WHERE User='root';"
+mysql -e "FLUSH PRIVILEGES;"
 
 # Messaging Service
-sudo yum install -y rabbitmq-server
-sudo service rabbitmq-server start
-sudo chkconfig rabbitmq-server on
-sudo rabbitmqctl change_password guest a7060f997fbff5065008
+yum install -y rabbitmq-server
+systemctl enable rabbitmq-server.service
+systemctl start rabbitmq-server.service
+rabbitmqctl change_password guest a7060f997fbff5065008
 
 # Identity Service
-sudo yum install -y openstack-keystone python-keystoneclient
-sudo openstack-config --set /etc/keystone/keystone.conf \
-   database connection mysql://keystone:a7060f997fbff5065008@controller/keystone
-mysql -u root -pa7060f997fbff5065008 -e " 
+mysql -u root -pa7060f997fbff5065008 -e "
 CREATE DATABASE keystone;
 GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost'  IDENTIFIED BY 'a7060f997fbff5065008';
 GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%'   IDENTIFIED BY 'a7060f997fbff5065008';
+FLUSH PRIVILEGES;
 "
-sudo  /bin/sh -c "keystone-manage db_sync"
+yum install -y openstack-keystone python-keystoneclient
 
 ADMIN_TOKEN=$(openssl rand -hex 10)
 echo $ADMIN_TOKEN
-sudo openstack-config --set /etc/keystone/keystone.conf DEFAULT \
-   admin_token $ADMIN_TOKEN
+openstack-config --set /etc/keystone/keystone.conf DEFAULT \
+		 admin_token $ADMIN_TOKEN
 
-sudo keystone-manage pki_setup --keystone-user keystone --keystone-group keystone
-sudo chown -R keystone:keystone /etc/keystone/ssl
-sudo chmod -R o-rwx /etc/keystone/ssl
-sudo chown keystone:keystone -R /var/log/keystone/
+openstack-config --set /etc/keystone/keystone.conf \
+		 database connection mysql://keystone:a7060f997fbff5065008@controller/keystone
 
-sudo service openstack-keystone start
-sudo chkconfig openstack-keystone on
+openstack-config --set /etc/keystone/keystone.conf \
+		 token provider keystone.token.providers.uuid.Provider
 
-sudo /bin/sh -c "(crontab -l -u keystone 2>&1 | grep -q token_flush)"
-sudo /bin/sh -c "echo '@hourly /usr/bin/keystone-manage token_flush >/var/log/keystone/keystone-tokenflush.log 2>&1' >> /var/spool/cron/keystone"
+openstack-config --set /etc/keystone/keystone.conf \
+		 token driver keystone.token.persistence.backends.sql.Token
+
+openstack-config --set /etc/keystone/keystone.conf DEFAULT \
+		 verbose True
+
+
+keystone-manage pki_setup --keystone-user keystone --keystone-group keystone
+chown -R keystone:keystone /var/log/keystone
+chown -R keystone:keystone /etc/keystone/ssl
+chmod -R o-rwx /etc/keystone/ssl
+
+su -s /bin/sh -c "keystone-manage db_sync" keystone
+
+systemctl enable openstack-keystone.service
+systemctl start openstack-keystone.service
+
+/bin/sh -c "(crontab -l -u keystone 2>&1 | grep -q token_flush)"
+/bin/sh -c "echo '@hourly /usr/bin/keystone-manage token_flush >/var/log/keystone/keystone-tokenflush.log 2>&1' >> /var/spool/cron/keystone"
 
 export OS_SERVICE_TOKEN=$ADMIN_TOKEN
 export OS_SERVICE_ENDPOINT=http://controller:35357/v2.0
@@ -125,107 +132,105 @@ keystone service-create --name=keystone --type=identity \
   --adminurl=http://controller:35357/v2.0
 
 
-sudo /bin/sh -c "echo 'export OS_USERNAME=admin' >> /etc/keystone/admin-openrc.sh"
-sudo /bin/sh -c "echo 'export OS_PASSWORD=a7060f997fbff5065008' >> /etc/keystone/admin-openrc.sh"
-sudo /bin/sh -c "echo 'export OS_TENANT_NAME=admin' >> /etc/keystone/admin-openrc.sh"
-sudo /bin/sh -c "echo 'export OS_AUTH_URL=http://controller:35357/v2.0' >> /etc/keystone/admin-openrc.sh"
+/bin/sh -c "echo 'export OS_USERNAME=admin' >> /etc/keystone/admin-openrc.sh"
+/bin/sh -c "echo 'export OS_PASSWORD=a7060f997fbff5065008' >> /etc/keystone/admin-openrc.sh"
+/bin/sh -c "echo 'export OS_TENANT_NAME=admin' >> /etc/keystone/admin-openrc.sh"
+/bin/sh -c "echo 'export OS_AUTH_URL=http://controller:35357/v2.0' >> /etc/keystone/admin-openrc.sh"
 
 # OpenStack Clients
-sudo yum install -y python-ceilometerclient
-sudo yum install -y python-cinderclient
-sudo yum install -y python-glanceclient
-sudo yum install -y python-heatclient
-sudo yum install -y python-keystoneclient
-sudo yum install -y python-neutronclient
-sudo yum install -y python-novaclient
-sudo yum install -y python-swiftclient
-sudo yum install -y python-troveclient
+yum install -y python-ceilometerclient
+yum install -y python-cinderclient
+yum install -y python-glanceclient
+yum install -y python-heatclient
+yum install -y python-keystoneclient
+yum install -y python-neutronclient
+yum install -y python-novaclient
+yum install -y python-swiftclient
+yum install -y python-troveclient
 
 # Glance - Image Service
-sudo yum install -y openstack-glance python-glanceclient
-
-sudo openstack-config --set /etc/glance/glance-api.conf database \
-  connection mysql://glance:a7060f997fbff5065008@controller/glance
-
-sudo openstack-config --set /etc/glance/glance-registry.conf database \
-  connection mysql://glance:a7060f997fbff5065008@controller/glance
-
 mysql -u root -pa7060f997fbff5065008 -e "
 CREATE DATABASE glance DEFAULT CHARACTER SET utf8;
 GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' IDENTIFIED BY 'a7060f997fbff5065008';
 GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'%' IDENTIFIED BY 'a7060f997fbff5065008';
 "
 
-sudo  /bin/sh -c "glance-manage db_sync" 
-
-
 keystone user-create --name=glance --pass=a7060f997fbff5065008 \
-   --email=glance@homecloud.com
+	 --email=glance@homecloud.com
+
 keystone user-role-add --user=glance --tenant=service --role=admin
 
-sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
-  auth_uri http://controller:5000
+keystone service-create --name glance --type image \
+	 --description "OpenStack Image Service"
 
-sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
-  auth_host controller
-
-sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
-  auth_port 35357
-sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
-  auth_protocol http
-
-sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
-  admin_tenant_name service
-
-sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
-  admin_user glance
-
-sudo openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
-  admin_password a7060f997fbff5065008
-
-sudo openstack-config --set /etc/glance/glance-api.conf paste_deploy \
-  flavor keystone
-
-sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
-  auth_uri http://controller:5000
-
-sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
-  auth_host controller
-
-sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
-  auth_port 35357
-
-sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
-  auth_protocol http
-
-sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
-  admin_tenant_name service
-
-sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
-  admin_user glance
-
-sudo openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
-  admin_password a7060f997fbff5065008
-
-sudo openstack-config --set /etc/glance/glance-registry.conf paste_deploy \
-  flavor keystone
-
-keystone service-create --name=glance --type=image \
-  --description="OpenStack Image Service"
 keystone endpoint-create \
-  --service-id=$(keystone service-list | awk '/ image / {print $2}') \
-  --publicurl=http://controller:9292 \
-  --internalurl=http://controller:9292 \
-  --adminurl=http://controller:9292
+	 --service-id $(keystone service-list | awk '/ image / {print $2}') \
+	 --publicurl http://controller:9292 \
+	 --internalurl http://controller:9292 \
+	 --adminurl http://controller:9292 \
+	   --region regionOne
 
-sudo chown glance:glance -R /var/log/glance
-sudo service openstack-glance-api start
-sudo service openstack-glance-registry start
-sudo chkconfig openstack-glance-api on
-sudo chkconfig openstack-glance-registry on
+yum install -y openstack-glance python-glanceclient
 
-glance image-create --name="cirros-0.3.2-x86_64" --disk-format=qcow2 \
-  --container-format=bare --is-public=true \
-  --copy-from http://cdn.download.cirros-cloud.net/0.3.2/cirros-0.3.2-x86_64-disk.img
+openstack-config --set /etc/glance/glance-api.conf database \
+		 connection mysql://glance:a7060f997fbff5065008@controller/glance
+
+openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+		 auth_uri http://controller:5000/v2.0
+openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+		 identity_uri http://controller:35357
+openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+		 admin_tenant_name = service
+openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+		 admin_user = glance
+openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+		 admin_password  a7060f997fbff5065008
+
+openstack-config --set /etc/glance/glance-api.conf paste_deploy \
+		 flavor keystone
+
+openstack-config --set /etc/glance/glance-api.conf glance_store \
+		 default_store file
+openstack-config --set /etc/glance/glance-api.conf glance_store \
+		 filesystem_store_datadir /var/lib/glance/images/
+
+openstack-config --set /etc/glance/glance-api.conf DEFAULT \
+		 verbose True
+
+openstack-config --set /etc/glance/glance-registry.conf database \
+		 connection mysql://glance:a7060f997fbff5065008@controller/glance
+
+openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+		 auth_uri http://controller:5000/v2.0
+openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+		 identity_uri http://controller:35357
+openstack-config --set /etc/glance/glance-api.conf keystone_authtoken \
+		 admin_tenant_name = service
+openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+		 admin_user = glance
+openstack-config --set /etc/glance/glance-registry.conf keystone_authtoken \
+		 admin_password  a7060f997fbff5065008
+
+openstack-config --set /etc/glance/glance-registry.conf paste_deploy \
+		                  flavor keystone
+
+openstack-config --set /etc/glance/glance-registry.conf DEFAULT \
+		                  verbose True
+
+su -s /bin/sh -c "glance-manage db_sync" glance
+
+# Starting Glance Services
+systemctl enable openstack-glance-api.service openstack-glance-registry.service
+systemctl start openstack-glance-api.service openstack-glance-registry.service
+
+#source /etc/keystone/admin-
+mkdir /tmp/images
+cd /tmp/images
+wget http://cdn.download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img
+#glance image-create --name "cirros-0.3.3-x86_64" --file cirros-0.3.3-x86_64-disk.img   --disk-format qcow2 --container-format bare --is-public True --progress
+#glance image-create --name "cirros-0.3.3-x86_64" --file cirros-0.3.3-x86_64-disk.img   --disk-format qcow2 --container-format bare --progress
+
+
+
 
 
